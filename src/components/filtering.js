@@ -1,7 +1,5 @@
 import {createComparison, defaultRules} from "../lib/compare.js";
 
-// @todo: #4.3 — настроить компаратор
-
 export function initFiltering(elements, indexes) {
     // @todo: #4.1 — заполнить выпадающие списки опциями
     Object.keys(indexes).forEach((elementName) => {
@@ -29,33 +27,37 @@ export function initFiltering(elements, indexes) {
             }
         }
 
-        // @todo: #4.5 — отфильтровать данные используя компаратор
+        // @todo: #4.3 — настроить компаратор
         
         // Создаём пользовательские правила для фильтрации по сумме
         const customRules = [];
         
         // Правило для totalFrom (сумма >= указанного значения)
-        if (state.totalFrom && state.totalFrom !== '') {
-            customRules.push((row, filterState) => {
-                const total = parseFloat(row.total);
-                const minTotal = parseFloat(filterState.totalFrom);
-                return !isNaN(total) && !isNaN(minTotal) && total >= minTotal;
-            });
-        }
+        customRules.push((row, filterState) => {
+            // Если поле пустое — пропускаем
+            if (!filterState.totalFrom || filterState.totalFrom === '') {
+                return true;
+            }
+            const total = parseFloat(row.total);
+            const minTotal = parseFloat(filterState.totalFrom);
+            return !isNaN(total) && !isNaN(minTotal) && total >= minTotal;
+        });
         
         // Правило для totalTo (сумма <= указанного значения)
-        if (state.totalTo && state.totalTo !== '') {
-            customRules.push((row, filterState) => {
-                const total = parseFloat(row.total);
-                const maxTotal = parseFloat(filterState.totalTo);
-                return !isNaN(total) && !isNaN(maxTotal) && total <= maxTotal;
-            });
-        }
+        customRules.push((row, filterState) => {
+            // Если поле пустое — пропускаем
+            if (!filterState.totalTo || filterState.totalTo === '') {
+                return true;
+            }
+            const total = parseFloat(row.total);
+            const maxTotal = parseFloat(filterState.totalTo);
+            return !isNaN(total) && !isNaN(maxTotal) && total <= maxTotal;
+        });
         
-        // Создаём функцию сравнения: стандартные правила + наши пользовательские
+        // Создаём функцию сравнения со стандартными правилами + нашими кастомными
         const compare = createComparison(defaultRules, customRules);
-        
-        // Фильтруем данные
+
+        // @todo: #4.5 — отфильтровать данные используя компаратор
         return data.filter(row => compare(row, state));
     }
 }
