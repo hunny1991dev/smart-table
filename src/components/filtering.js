@@ -1,4 +1,4 @@
-import {createComparison, defaultRules} from "../lib/compare.js";
+import {createComparison, defaultRules, rules} from "../lib/compare.js";
 
 export function initFiltering(elements, indexes) {
     // @todo: #4.1 — заполнить выпадающие списки опциями
@@ -29,35 +29,62 @@ export function initFiltering(elements, indexes) {
 
         // @todo: #4.3 — настроить компаратор
         
-        // Создаём пользовательские правила для фильтрации по сумме
+        // Создаём кастомные правила для totalFrom и totalTo
         const customRules = [];
         
         // Правило для totalFrom (сумма >= указанного значения)
-        customRules.push((row, filterState) => {
-            // Если поле пустое — пропускаем
-            if (!filterState.totalFrom || filterState.totalFrom === '') {
-                return true;
+        customRules.push((key, sourceValue, targetValue, source, target) => {
+            // Срабатываем только для ключа totalFrom
+            if (key !== 'totalFrom') {
+                return { continue: true };
             }
-            const total = parseFloat(row.total);
-            const minTotal = parseFloat(filterState.totalFrom);
-            return !isNaN(total) && !isNaN(minTotal) && total >= minTotal;
+            
+            // Если значение пустое — пропускаем это поле
+            if (targetValue === undefined || targetValue === null || targetValue === '') {
+                return { skip: true };
+            }
+            
+            // Получаем сумму из исходного объекта
+            const total = parseFloat(source.total);
+            const minTotal = parseFloat(targetValue);
+            
+            // Проверяем, что сумма >= минимального значения
+            if (!isNaN(total) && !isNaN(minTotal) && total >= minTotal) {
+                return { result: true };
+            }
+            
+            return { result: false };
         });
         
         // Правило для totalTo (сумма <= указанного значения)
-        customRules.push((row, filterState) => {
-            // Если поле пустое — пропускаем
-            if (!filterState.totalTo || filterState.totalTo === '') {
-                return true;
+        customRules.push((key, sourceValue, targetValue, source, target) => {
+            // Срабатываем только для ключа totalTo
+            if (key !== 'totalTo') {
+                return { continue: true };
             }
-            const total = parseFloat(row.total);
-            const maxTotal = parseFloat(filterState.totalTo);
-            return !isNaN(total) && !isNaN(maxTotal) && total <= maxTotal;
+            
+            // Если значение пустое — пропускаем это поле
+            if (targetValue === undefined || targetValue === null || targetValue === '') {
+                return { skip: true };
+            }
+            
+            // Получаем сумму из исходного объекта
+            const total = parseFloat(source.total);
+            const maxTotal = parseFloat(targetValue);
+            
+            // Проверяем, что сумма <= максимального значения
+            if (!isNaN(total) && !isNaN(maxTotal) && total <= maxTotal) {
+                return { result: true };
+            }
+            
+            return { result: false };
         });
-        
-        // Создаём функцию сравнения со стандартными правилами + нашими кастомными
-        const compare = createComparison(defaultRules, customRules);
 
         // @todo: #4.5 — отфильтровать данные используя компаратор
+        
+        // Создаём функцию сравнения: стандартные правила + наши кастомные
+        const compare = createComparison(defaultRules, customRules);
+        
         return data.filter(row => compare(row, state));
     }
 }
