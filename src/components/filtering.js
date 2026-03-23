@@ -29,62 +29,46 @@ export function initFiltering(elements, indexes) {
 
         // @todo: #4.3 — настроить компаратор
         
-        // Создаём кастомные правила для totalFrom и totalTo
+        // Создаём копию state и преобразуем totalFrom/totalTo в массив для поля total
+        const modifiedState = { ...state };
+        
+        // Если есть оба поля или одно из них, создаём массив [from, to]
+        if (modifiedState.totalFrom !== undefined || modifiedState.totalTo !== undefined) {
+            const from = modifiedState.totalFrom ? parseFloat(modifiedState.totalFrom) : undefined;
+            const to = modifiedState.totalTo ? parseFloat(modifiedState.totalTo) : undefined;
+            
+            // Создаём массив [from, to] для поля total
+            if (from !== undefined || to !== undefined) {
+                modifiedState.total = [from, to];
+            }
+        }
+        
+        // Создаём кастомные правила
         const customRules = [];
         
-        // Правило для totalFrom (сумма >= указанного значения)
+        // Добавляем правило для проверки диапазона через arrayAsRange
+        // Создаём правило, которое будет применяться к полю total
         customRules.push((key, sourceValue, targetValue, source, target) => {
-            // Срабатываем только для ключа totalFrom
-            if (key !== 'totalFrom') {
+            // Нас интересует только поле total
+            if (key !== 'total') {
                 return { continue: true };
             }
             
-            // Если значение пустое — пропускаем это поле
-            if (targetValue === undefined || targetValue === null || targetValue === '') {
-                return { skip: true };
-            }
-            
-            // Получаем сумму из исходного объекта
-            const total = parseFloat(source.total);
-            const minTotal = parseFloat(targetValue);
-            
-            // Проверяем, что сумма >= минимального значения
-            if (!isNaN(total) && !isNaN(minTotal) && total >= minTotal) {
-                return { result: true };
-            }
-            
-            return { result: false };
-        });
-        
-        // Правило для totalTo (сумма <= указанного значения)
-        customRules.push((key, sourceValue, targetValue, source, target) => {
-            // Срабатываем только для ключа totalTo
-            if (key !== 'totalTo') {
+            // Если targetValue не массив, пропускаем
+            if (!Array.isArray(targetValue)) {
                 return { continue: true };
             }
             
-            // Если значение пустое — пропускаем это поле
-            if (targetValue === undefined || targetValue === null || targetValue === '') {
-                return { skip: true };
-            }
-            
-            // Получаем сумму из исходного объекта
-            const total = parseFloat(source.total);
-            const maxTotal = parseFloat(targetValue);
-            
-            // Проверяем, что сумма <= максимального значения
-            if (!isNaN(total) && !isNaN(maxTotal) && total <= maxTotal) {
-                return { result: true };
-            }
-            
-            return { result: false };
+            // Используем встроенное правило arrayAsRange
+            const rangeRule = rules.arrayAsRange();
+            return rangeRule(key, sourceValue, targetValue, source, target);
         });
 
         // @todo: #4.5 — отфильтровать данные используя компаратор
         
-        // Создаём функцию сравнения: стандартные правила + наши кастомные
+        // Создаём функцию сравнения с модифицированным state
         const compare = createComparison(defaultRules, customRules);
         
-        return data.filter(row => compare(row, state));
+        return data.filter(row => compare(row, modifiedState));
     }
 }
