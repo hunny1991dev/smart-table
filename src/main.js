@@ -91,10 +91,6 @@ async function init() {
     });
     
     console.log('Indexes loaded:', indexes);
-    
-    // Ждём завершения первого рендера
-    await render();
 }
 
-// Запускаем приложение
-init();
+init().then(() => render());
