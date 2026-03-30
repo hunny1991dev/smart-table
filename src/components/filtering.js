@@ -1,74 +1,60 @@
-import {createComparison, defaultRules, rules} from "../lib/compare.js";
+export function initFiltering(elements) {
+    // Функция для заполнения выпадающих списков опциями (вызывается ПОСЛЕ получения индексов)
+    const updateIndexes = (elements, indexes) => {
+        Object.keys(indexes).forEach((elementName) => {
+            const select = elements[elementName];
+            if (select) {
+                const firstOption = select.options[0];
+                select.innerHTML = '';
+                if (firstOption && firstOption.value === '') {
+                    select.appendChild(firstOption);
+                }
+            }
+            
+            Object.values(indexes[elementName]).forEach(name => {
+                const el = document.createElement('option');
+                el.textContent = name;
+                el.value = name;
+                elements[elementName].appendChild(el);
+            });
+        });
+    };
 
-export function initFiltering(elements, indexes) {
-    // @todo: #4.1 — заполнить выпадающие списки опциями
-    Object.keys(indexes).forEach((elementName) => {
-        elements[elementName].append(
-            ...Object.values(indexes[elementName]).map(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                return option;
-            })
-        )
-    });
+    // Функция для формирования параметров запроса
+    const applyFiltering = (query, state, action) => {
 
-    return (data, state, action) => {
-        // @todo: #4.2 — обработать очистку поля
         if (action && action.name === 'clear') {
             const parent = action.closest('.filter-group');
             const input = parent.querySelector('input, select');
             if (input) {
                 input.value = '';
                 const fieldName = action.dataset.field;
-                if (fieldName && state[fieldName] !== undefined) {
-                    state[fieldName] = '';
+                if (fieldName) {
+
+                    delete state[fieldName];
                 }
             }
         }
-
-        // @todo: #4.3 — настроить компаратор
         
-        // Создаём копию state и преобразуем totalFrom/totalTo в массив для поля total
-        const modifiedState = { ...state };
+        const filter = {};
         
-        // Если есть оба поля или одно из них, создаём массив [from, to]
-        if (modifiedState.totalFrom !== undefined || modifiedState.totalTo !== undefined) {
-            const from = modifiedState.totalFrom ? parseFloat(modifiedState.totalFrom) : undefined;
-            const to = modifiedState.totalTo ? parseFloat(modifiedState.totalTo) : undefined;
-            
-            // Создаём массив [from, to] для поля total
-            if (from !== undefined || to !== undefined) {
-                modifiedState.total = [from, to];
+        Object.keys(elements).forEach(key => {
+            const element = elements[key];
+            if (element) {
+                const tagName = element.tagName;
+                const value = element.value;
+                
+                if (['INPUT', 'SELECT'].includes(tagName) && value && value !== '') {
+                    filter[`filter[${element.name}]`] = value;
+                }
             }
-        }
-        
-        // Создаём кастомные правила
-        const customRules = [];
-        
-        // Добавляем правило для проверки диапазона через arrayAsRange
-        // Создаём правило, которое будет применяться к полю total
-        customRules.push((key, sourceValue, targetValue, source, target) => {
-            // Нас интересует только поле total
-            if (key !== 'total') {
-                return { continue: true };
-            }
-            
-            // Если targetValue не массив, пропускаем
-            if (!Array.isArray(targetValue)) {
-                return { continue: true };
-            }
-            
-            // Используем встроенное правило arrayAsRange
-            const rangeRule = rules.arrayAsRange();
-            return rangeRule(key, sourceValue, targetValue, source, target);
         });
+        
+        return Object.keys(filter).length ? { ...query, ...filter } : query;
+    };
 
-        // @todo: #4.5 — отфильтровать данные используя компаратор
-        
-        // Создаём функцию сравнения с модифицированным state
-        const compare = createComparison(defaultRules, customRules);
-        
-        return data.filter(row => compare(row, modifiedState));
-    }
+    return {
+        updateIndexes,
+        applyFiltering
+    };
 }
