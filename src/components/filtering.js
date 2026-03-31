@@ -24,7 +24,7 @@ export function initFiltering(elements) {
     const applyFiltering = (query, state, action) => {
 
         if (action && action.name === 'clear') {
-            const parent = action.closest('.filter-group');
+            const parent = action.closest('.filter-wrapper');
             const input = parent.querySelector('input, select');
             if (input) {
                 input.value = '';
